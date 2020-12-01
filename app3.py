@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, session
 from flask import abort
+from flask_cors import CORS, cross_origin
 from flask import make_response, url_for
 import json
 from time import gmtime, strftime
@@ -8,6 +9,9 @@ import sqlite3
 
 
 app = Flask(__name__)
+app.config.from_object(__name__)
+app.secret_key = 'F12Zr47j\3yX R~X@H!jmM]Lwf/,?KT'
+CORS(app)
 
 def list_users():
     conn = sqlite3.connect('mydb.db')
@@ -27,6 +31,7 @@ def list_users():
     return jsonify({'user_list': api_list})
 
 def list_user(user_id):
+    print (user_id)
     conn = sqlite3.connect('mydb.db')
     print ("Opened database successfully")
     api_list=[]
@@ -162,7 +167,44 @@ def upd_user(user):
                 conn.commit()
     return "Success"
 
+def sumSessionCounter():
+  try:
+    session['counter'] += 1
+  except KeyError:
+    session['counter'] = 1
 
+
+@app.route('/')
+def main():
+    sumSessionCounter()
+    return render_template('main.html')
+
+
+@app.route('/addname')
+def addname():
+  sumSessionCounter()
+  if request.args.get('yourname'):
+    session['name'] = request.args.get('yourname')
+    # And then redirect the user to the main page
+    return redirect(url_for('main'))
+  else:
+    # If no name has been sent, show the form
+    return render_template('addname.html', session=session)
+
+@app.route('/clear')
+def clearsession():
+    # Clear the session
+    session.clear()
+    # Redirect the user to the main page
+    return redirect(url_for('main'))
+
+@app.route('/adduser')
+def adduser():
+    return render_template('adduser.html')
+
+@app.route('/addtweets')
+def addtweetjs():
+    return render_template('addtweets.html')
 
 @app.route("/api/v1/info")
 def home_index():
@@ -248,6 +290,11 @@ def add_tweets():
 def get_tweet(id):
     return list_tweet(id)
 
+
+# @auth.error_handler
+# def unauthorized():
+#     return make_response(jsonify( { 'error': 'Unauthorized access' } ), 403)
+#     # return 403 instead of 401 to prevent browsers from displaying the default auth dialog
 
 @app.errorhandler(404)
 def resource_not_found(error):
